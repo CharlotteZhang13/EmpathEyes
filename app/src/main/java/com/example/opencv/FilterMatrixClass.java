@@ -1,16 +1,9 @@
 package com.example.opencv;
 
 import static java.lang.Math.floor;
-
 import android.graphics.ColorMatrix;
-import android.graphics.ColorMatrixColorFilter;
-import android.os.Debug;
 import android.util.Log;
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
-import java.lang.Math;
 
 public final class FilterMatrixClass {
     private float[][] protanomalyMatrices, deuteranomalyMatrices, tritanomalyMatrices;

@@ -2,50 +2,27 @@ package com.example.opencv;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.ImageFormat;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
-import android.media.Image;
 import android.os.Bundle;
 import android.util.Log;
-
-import android.view.View;
-import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
-import androidx.camera.core.impl.ImageAnalysisConfig;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
 import com.google.common.util.concurrent.ListenableFuture;
-
-import org.opencv.android.OpenCVLoader;
-import org.opencv.android.Utils;
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -53,7 +30,6 @@ public class MainActivity extends AppCompatActivity {
 
     private File outputDirectory;
     private ExecutorService cameraExecutor;
-//    private ImageView imgView;
     private long lastAnalyzedTimestamp = -6000;
     private long FRAME_INTERVAL_MILLIS = 6000;
     private FilterView filterView;
@@ -71,7 +47,6 @@ public class MainActivity extends AppCompatActivity {
         filterView = findViewById(R.id.filterView);
         radioGroup = findViewById(R.id.radio_group);
         seekBar = findViewById(R.id.seekBar);
-        OpenCVLoader.initDebug();
 
         radioGroup.setOnCheckedChangeListener((group, checkedId) -> {
             RadioButton selectedRadioButton = findViewById(checkedId);
@@ -107,11 +82,6 @@ public class MainActivity extends AppCompatActivity {
                     Configuration.REQUEST_CODE_PERMISSIONS);
         }
 
-//        imgView = findViewById(R.id.imageView);
-//        // 设置拍照按钮监听
-//        Button camera_capture_button = findViewById(R.id.image_capture_button);
-//        camera_capture_button.setOnClickListener(v -> takePhoto());
-
         // 设置照片等保存的位置
         outputDirectory = getOutputDirectory();
 
@@ -131,10 +101,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
-//    private void takePhoto() {
-//
-//    }
 
     private void startCamera() {
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
@@ -196,9 +162,6 @@ public class MainActivity extends AppCompatActivity {
         @SuppressLint("UnsafeOptInUsageError")
         @Override
         public void analyze(@NonNull ImageProxy imageProxy) {
-
-//            long currentTimestamp = System.currentTimeMillis();
-//            if (currentTimestamp - lastAnalyzedTimestamp >= FRAME_INTERVAL_MILLIS) {
                 int width = imageProxy.getWidth();
                 int height = imageProxy.getHeight();
                 ByteBuffer buffer = imageProxy.getPlanes()[0].getBuffer();
@@ -208,57 +171,11 @@ public class MainActivity extends AppCompatActivity {
                 ByteBuffer bitmapBuffer = ByteBuffer.wrap(rgbaData);
                 bitmap.copyPixelsFromBuffer(bitmapBuffer);
 
-
-//                Mat mat = new Mat();
-//                Utils.bitmapToMat(bitmap, mat);
-//
-//                Mat filter = Mat.zeros(3,3,CvType.CV_64F);
-//                double[] data = {1.017277,0.027029,-0.044306 ,-0.006113,0.958479,0.047634,0.006379,0.248708,0.744913};
-//                for(int i = 0; i<3; i++){
-//                    for(int j = 0; j<3; j++){
-//                        filter.put(i, j, data[i*3 + j]);
-//                    }
-//                }
-//
-//                Mat newMat = new Mat(height, width, CvType.CV_8UC4);
-//                for(int row = 0; row<height; row++){
-//                    for(int column = 0; column<width; column++){
-//                        double[] dt = new double[4];
-//                        dt[3] = mat.get(row, column)[3];
-//                        for(int i = 0; i<3; i++){
-//                            double r, g, b;
-//                            b = mat.get(row, column)[0];
-//                            g = mat.get(row, column)[1];
-//                            r = mat.get(row, column)[2];
-//                            double x, y, z;
-//                            x = filter.get(0, i)[0];
-//                            y = filter.get(1, i)[0];
-//                            z = filter.get(2, i)[0];
-//
-//                            double result = r*x + g*y + b*z;
-//                            if(result>=255){
-//                                dt[2-i] = 255;
-//                            } else if(result<=0){
-//                                dt[2-i] = 0;
-//                            } else {
-//                                dt[2-i] = result;
-//                            }
-//                        }
-//                        newMat.put(row, column, dt);
-//                    }
-//                }
-//
-//                Bitmap bm = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-//                Utils.matToBitmap(newMat,bm);
-
                 runOnUiThread(() -> {
-//                    imgView.setImageBitmap(bm);
                     filterView.updateBitmap(bitmap);
                     filterView.postInvalidate();
                     imageProxy.close();
                 });
-//                lastAnalyzedTimestamp = currentTimestamp;
             }
-//        }
     }
 }
