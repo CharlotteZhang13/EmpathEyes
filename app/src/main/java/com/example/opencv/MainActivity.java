@@ -59,6 +59,8 @@ public class MainActivity extends AppCompatActivity {
     private FilterView filterView;
     private RadioGroup radioGroup;
     private SeekBar seekBar;
+    private static float SEEKBARMAX = 100f;
+    private static float SEEKBARPROGRESS = 0.2f;
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -77,10 +79,12 @@ public class MainActivity extends AppCompatActivity {
             Log.d("-----------", (String) selectedRadioButton.getText());
         });
 
+        seekBar.setMax((int)SEEKBARMAX);
+        seekBar.setProgress((int)(SEEKBARMAX * SEEKBARPROGRESS));
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-
+                filterView.updateSlider(progress, SEEKBARMAX);
             }
 
             @Override
