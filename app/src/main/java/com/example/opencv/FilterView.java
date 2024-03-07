@@ -26,7 +26,6 @@ public class FilterView extends View {
     }
 
     public void updateBitmap(Bitmap m_bitmap){
-
         bitmap = m_bitmap;
         bitmap = adjustPhotoRotation(bitmap, 90);
     }
@@ -48,11 +47,9 @@ public class FilterView extends View {
 
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-
         if(bitmap != null){
             ColorMatrix filterMatrix = FilterMatrixClass.getInstance().produceFilterMatrix(this.colorBlindess,this.reading, this.maxReading);
             mPaint.setColorFilter(new ColorMatrixColorFilter(filterMatrix));
-
             canvas.drawBitmap(bitmap, null, new Rect(0, 0, 1200, 1200 * bitmap.getHeight() / bitmap.getWidth()), mPaint);
         }
     }

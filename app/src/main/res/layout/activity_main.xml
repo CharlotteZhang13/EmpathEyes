@@ -8,19 +8,19 @@
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
         android:layout_width="match_parent"
-        android:layout_height="300dp" />
+        android:layout_height="280dp" />
 
     <com.example.opencv.FilterView
         android:id="@+id/filterView"
         android:layout_width="match_parent"
-        android:layout_height="300dp"/>
-
+        android:layout_height="280dp"/>
 
     <RadioGroup
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:id="@+id/radio_group"
+        android:layout_gravity="center"
         >
         <RadioButton
             android:layout_width="wrap_content"
@@ -45,6 +45,14 @@
     <SeekBar
         android:id="@+id/seekBar"
         android:layout_width="400dp"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"/>
+
+    <Button
+        android:layout_width="100dp"
+        android:layout_height="40dp"
+        android:layout_gravity="center"
+        android:id="@+id/cameraButton"
+        android:text="Camera" />
 
 </LinearLayout>
