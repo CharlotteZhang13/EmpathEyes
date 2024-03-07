@@ -245,7 +245,6 @@ public final class FilterMatrixClass {
             if(rr <= 10){
                 filterMatrix[i] =  filterMatrix[i] + blindnessMatrices[rr][i] * factor;
             }
-            Log.d(Integer.toString(i), Float.toString(filterMatrix[i]));
         }
 
         return new ColorMatrix(filterMatrix);

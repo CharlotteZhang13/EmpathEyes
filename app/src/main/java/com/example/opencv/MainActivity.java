@@ -2,15 +2,24 @@ package com.example.opencv;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
@@ -34,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
     private long FRAME_INTERVAL_MILLIS = 6000;
     private FilterView filterView;
     private RadioGroup radioGroup;
+    private Button cameraButton;
     private SeekBar seekBar;
     private static float SEEKBARMAX = 100f;
     private static float SEEKBARPROGRESS = 0.2f;
@@ -48,10 +58,26 @@ public class MainActivity extends AppCompatActivity {
         radioGroup = findViewById(R.id.radio_group);
         seekBar = findViewById(R.id.seekBar);
 
+        cameraButton = findViewById(R.id.cameraButton);
+        cameraButton.setOnClickListener(v -> {
+            Bitmap bitmap = saveViewAsBitmap(filterView);
+            View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_layout, null);
+            ImageView imageView = dialogView.findViewById(R.id.imageView);
+            imageView.setImageBitmap(bitmap);
+            AlertDialog alertDialog1 = new AlertDialog.Builder(this)
+                    .setView(dialogView)
+                    .setPositiveButton("Share", (dialog, which) -> {
+                        Intent intent = new Intent(this, GaodeActivity.class);
+                        startActivity(intent);
+                    })
+                    .create();
+            alertDialog1.show();
+        });
+
+
         radioGroup.setOnCheckedChangeListener((group, checkedId) -> {
             RadioButton selectedRadioButton = findViewById(checkedId);
             filterView.updateButton((String) selectedRadioButton.getText());
-            Log.d("-----------", (String) selectedRadioButton.getText());
         });
 
         seekBar.setMax((int)SEEKBARMAX);
@@ -178,4 +204,31 @@ public class MainActivity extends AppCompatActivity {
                 });
             }
     }
+
+    public static Bitmap saveViewAsBitmap(View view) {
+        int width = view.getWidth();
+        int height = view.getHeight();
+        if (width <= 0 || height <= 0) {
+            int specSize = View.MeasureSpec.makeMeasureSpec(0 /* any */, View.MeasureSpec.UNSPECIFIED);
+            view.measure(specSize, specSize);
+            width = view.getMeasuredWidth();
+            height = view.getMeasuredHeight();
+        }
+        if (width <= 0 || height <= 0) {
+            return null;
+        }
+
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        if(view.getRight() <= 0 || view.getBottom() <= 0) {
+            view.layout(0, 0, width, height);
+            view.draw(canvas);
+        } else {
+            view.layout(view.getLeft(), view.getTop(), view.getRight(), view.getBottom());
+            view.draw(canvas);
+        }
+
+        return bitmap;
+    }
+
 }
