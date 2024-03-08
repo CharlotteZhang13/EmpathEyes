@@ -1,15 +1,18 @@
 package com.example.opencv;
 
 import static java.lang.Math.floor;
+
+import android.graphics.Bitmap;
 import android.graphics.ColorMatrix;
-import android.util.Log;
+
 import java.util.Objects;
 
-public final class FilterMatrixClass {
+public final class DataClass {
     private float[][] protanomalyMatrices, deuteranomalyMatrices, tritanomalyMatrices;
-    private static FilterMatrixClass filterMatrixClass = new FilterMatrixClass();
+    private static DataClass filterMatrixClass = new DataClass();
+    private Bitmap capturedBitmap;
 
-    private FilterMatrixClass() {
+    private DataClass() {
         this.protanomalyMatrices = new float[][]{
                 {
                         1.000000f, 0.000000f, -0.000000f, 0, 0,
@@ -216,7 +219,7 @@ public final class FilterMatrixClass {
         };
     }
 
-    public static FilterMatrixClass getInstance() {
+    public static DataClass getInstance() {
         return filterMatrixClass;
     }
 
@@ -248,5 +251,13 @@ public final class FilterMatrixClass {
         }
 
         return new ColorMatrix(filterMatrix);
+    }
+
+    protected Bitmap getCapturedBitmap(){
+        return capturedBitmap;
+    }
+
+    protected void updateCapturedBitmap(Bitmap bitmap){
+        capturedBitmap = bitmap;
     }
 }

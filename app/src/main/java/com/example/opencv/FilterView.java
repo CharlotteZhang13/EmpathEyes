@@ -14,7 +14,7 @@ import android.graphics.Canvas;
 public class FilterView extends View {
 
     private Paint mPaint = new Paint();
-    private Bitmap bitmap;
+    private Bitmap canvasBitmap;
     private String colorBlindess = "Protanomaly";
     private float reading = 20;
     private float maxReading = 100;
@@ -26,8 +26,8 @@ public class FilterView extends View {
     }
 
     public void updateBitmap(Bitmap m_bitmap){
-        bitmap = m_bitmap;
-        bitmap = adjustPhotoRotation(bitmap, 90);
+        canvasBitmap = m_bitmap;
+        canvasBitmap = adjustPhotoRotation(canvasBitmap, 90);
     }
 
     public void updateButton(String i){
@@ -47,10 +47,10 @@ public class FilterView extends View {
 
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if(bitmap != null){
-            ColorMatrix filterMatrix = FilterMatrixClass.getInstance().produceFilterMatrix(this.colorBlindess,this.reading, this.maxReading);
+        if(canvasBitmap != null){
+            ColorMatrix filterMatrix = DataClass.getInstance().produceFilterMatrix(this.colorBlindess,this.reading, this.maxReading);
             mPaint.setColorFilter(new ColorMatrixColorFilter(filterMatrix));
-            canvas.drawBitmap(bitmap, null, new Rect(0, 0, 1200, 1200 * bitmap.getHeight() / bitmap.getWidth()), mPaint);
+            canvas.drawBitmap(canvasBitmap, null, new Rect(0, 0, 1200, 1200 * canvasBitmap.getHeight() / canvasBitmap.getWidth()), mPaint);
         }
     }
 

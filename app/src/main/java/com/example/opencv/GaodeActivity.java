@@ -2,6 +2,8 @@ package com.example.opencv;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.graphics.Bitmap;
+import android.graphics.Matrix;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
@@ -28,8 +30,6 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
     //显示地图需要的变量
     private MapView mapView;//地图控件
     private AMap aMap;//地图对象
-
-
     //定位需要的声明
     private AMapLocationClient mLocationClient = null;//定位发起端
     private AMapLocationClientOption mLocationOption = null;//定位参数
@@ -37,18 +37,21 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
 
     //标识，用于判断是否只显示一次定位信息和用户重新定位
     private boolean isFirstLoc = true;
+    private Bitmap bitmap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_gaode);
 
+        bitmap = DataClass.getInstance().getCapturedBitmap();
+        DataClass.getInstance().updateCapturedBitmap(null);
+
         mapView = (MapView) findViewById(R.id.map);
         //必须要写
         mapView.onCreate(savedInstanceState);
         //获取地图对象
         aMap = mapView.getMap();
-
 
         //设置显示定位按钮 并且可以点击
         UiSettings settings = aMap.getUiSettings();
@@ -58,7 +61,6 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         settings.setMyLocationButtonEnabled(true);
         // 是否可触发定位并显示定位层
         aMap.setMyLocationEnabled(true);
-
 
         //定位的小图标 默认是蓝点 这里自定义一团火，其实就是一张图片
         MyLocationStyle myLocationStyle = new MyLocationStyle();
@@ -164,7 +166,9 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         //设置图钉选项
         MarkerOptions options = new MarkerOptions();
         //图标
-        options.icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_launcher));
+        if(bitmap != null){
+            options.icon(BitmapDescriptorFactory.fromBitmap(scaleBitmap(bitmap, 0.2f)));
+        }
         //位置
         options.position(new LatLng(amapLocation.getLatitude(), amapLocation.getLongitude()));
         StringBuffer buffer = new StringBuffer();
@@ -179,6 +183,14 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         return options;
 
     }
+
+    private Bitmap scaleBitmap(Bitmap bitmap, float scale){
+        Matrix matrix = new Matrix();
+        matrix.setScale(scale, scale);
+        Bitmap newBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
+        return newBitmap;
+    }
+
     //激活定位
     @Override
     public void activate(LocationSource.OnLocationChangedListener listener) {
