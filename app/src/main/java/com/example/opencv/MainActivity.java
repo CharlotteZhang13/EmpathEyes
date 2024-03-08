@@ -2,12 +2,10 @@ package com.example.opencv;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -68,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
                     .setView(dialogView)
                     .setPositiveButton("Share", (dialog, which) -> {
                         Intent intent = new Intent(this, GaodeActivity.class);
+                        DataClass.getInstance().updateCapturedBitmap(bitmap);
                         startActivity(intent);
                     })
                     .create();
