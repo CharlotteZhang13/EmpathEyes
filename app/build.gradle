@@ -4,6 +4,14 @@ plugins {
 }
 
 android {
+    signingConfigs {
+        debug {
+            storeFile file('D:\\AndriodStudioProjects\\KeyStorePath\\key.jks')
+            storePassword 'maggie12'
+            keyAlias 'key0'
+            keyPassword 'maggie12'
+        }
+    }
     namespace 'com.example.opencv'
     compileSdk 34
 
@@ -22,10 +30,27 @@ android {
         }
     }
 
+//    signingConfigs {
+//        config {
+//            keyAlias '{key0}'
+//            keyPassword '{maggie12}'
+//            storeFile file('{D:\\AndriodStudioProjects\\KeyStorePath\\key.jks}')
+//            storePassword '{maggie12}'
+//        }
+//    }
+
     buildTypes {
+//        debug {
+//            // 增加签名设置
+//            signingConfig signingConfigs.config
+//        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // 增加签名设置
+//            signingConfig signingConfigs.config
+//            minifyEnabled false
+//            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
@@ -63,4 +88,9 @@ dependencies {
     implementation("androidx.camera:camera-extensions:1.1.0-beta01")
 
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+
+    implementation 'cn.leancloud:realtime-android:8.2.19'
+    implementation 'cn.leancloud:storage-android:8.2.19'
+    implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
+
 }
