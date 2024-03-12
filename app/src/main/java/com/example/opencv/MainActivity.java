@@ -28,6 +28,7 @@ import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.google.common.util.concurrent.ListenableFuture;
+
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
@@ -51,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
 
         filterView = findViewById(R.id.filterView);
         radioGroup = findViewById(R.id.radio_group);

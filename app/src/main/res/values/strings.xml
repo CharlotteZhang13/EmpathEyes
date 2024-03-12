@@ -2,4 +2,7 @@
     <string name="app_name">OpenCV</string>
     <string name="title_activity_maps">MapsActivity</string>
     <string name="maps_api_key">AIzaSyCUqYNHj-NAukE1Y0sr369XKOYG8wJ8kjA</string>
+    <string name="back4app_server_url">https://parseapi.back4app.com/</string>
+    <string name="back4app_app_id">Jdmf6kmghmu5SpE9qEYpCv5QZRzqaP6h64NxD0la</string>
+    <string name="back4app_client_key">73RfzVoYx1vfHRXEZwkpmbnH6mPCe9o7bmofewAl</string>
 </resources>
