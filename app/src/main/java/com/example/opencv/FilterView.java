@@ -48,7 +48,7 @@ public class FilterView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         if(canvasBitmap != null){
-            ColorMatrix filterMatrix = DataClass.getInstance().produceFilterMatrix(this.colorBlindess,this.reading, this.maxReading);
+            ColorMatrix filterMatrix = FilterMatrixClass.getInstance().produceFilterMatrix(this.colorBlindess,this.reading, this.maxReading);
             mPaint.setColorFilter(new ColorMatrixColorFilter(filterMatrix));
             canvas.drawBitmap(canvasBitmap, null, new Rect(0, 0, 1200, 1200 * canvasBitmap.getHeight() / canvasBitmap.getWidth()), mPaint);
         }
