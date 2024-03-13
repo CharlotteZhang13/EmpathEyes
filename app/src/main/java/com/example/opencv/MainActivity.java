@@ -61,30 +61,12 @@ public class MainActivity extends AppCompatActivity {
     private String comments;
     private String id;
 
-    protected void getDatabase(){
-        LeanCloud.initialize(this, "nMKlsJWMeXPRTzUXRAtfRA24-gzGzoHsz", "jHVnjnAuhQ52D1BD6QLbKmaH", "https://nmklsjwm.lc-cn-n1-shared.com");
-        LCQuery<LCObject> query = new LCQuery<>("Markers");
-        query.getInBackground("65f02a5b9bbdb31949a9c7b5").subscribe(new Observer<LCObject>() {
-            public void onSubscribe(Disposable disposable) {}
-            public void onNext(LCObject marker) {
-                // todo 就是 objectId 为 582570f38ac247004f39c24b 的 Todo 实例
-                String comment    = marker.getString("comment");
-            }
-            public void onError(Throwable throwable) {
-
-            }
-            public void onComplete(){;
-            }
-        });
-    }
-
     @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        getDatabase();
+        LeanCloud.initialize(this, "nMKlsJWMeXPRTzUXRAtfRA24-gzGzoHsz", "jHVnjnAuhQ52D1BD6QLbKmaH", "https://nmklsjwm.lc-cn-n1-shared.com");
 
         filterView = findViewById(R.id.filterView);
         radioGroup = findViewById(R.id.radio_group);
@@ -101,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
                     .setPositiveButton("Share", (dialog, which) -> {
                         this.bitmap = bitmap;
                         EditText editText = dialogView.findViewById(R.id.editText);
-                        this.comments = editText.toString();
+                        this.comments = editText.getText().toString();
                         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, Configuration.REQUEST_WRITE_BITMAP_PERMISSIONS);
                     })
                     .create();
@@ -164,7 +146,6 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     DataClass.getInstance().updateCapturedBitmap(this.bitmap);
                     File f = new File(MainActivity.this.getExternalFilesDir(null).getAbsolutePath(), "bitmap.png");
-                    Log.d("-----------", MainActivity.this.getExternalFilesDir(null).getAbsolutePath());
                     f.createNewFile();
                     FileOutputStream fOut = null;
                     try {
@@ -191,14 +172,10 @@ public class MainActivity extends AppCompatActivity {
                 file.saveInBackground().subscribe(new Observer<LCFile>() {
                     public void onSubscribe(Disposable disposable) {}
                     public void onNext(LCFile file) {
-                        System.out.println("文件保存完成。URL：" + file.getUrl());
                     }
                     public void onError(Throwable throwable) {
-                        // 保存失败，可能是文件无法被读取，或者上传过程中出现问题
-                        Log.d("-----------","error!");
                     }
                     public void onComplete() {
-                        Log.d("-----------","successful!");
                     }
                 });
 
@@ -208,18 +185,19 @@ public class MainActivity extends AppCompatActivity {
                 marker.saveInBackground().subscribe(new Observer<LCObject>() {
                     public void onSubscribe(Disposable disposable) {}
                     public void onNext(LCObject todo) {
-                        // 成功保存之后，执行其他逻辑
                         id = todo.getObjectId();
+                        Intent intent = new Intent(MainActivity.this, GaodeActivity.class);
+                        intent.putExtra("id", id);
+                        Log.d("------------", id);
+                        startActivity(intent);
                     }
                     public void onError(Throwable throwable) {
                         // 异常处理
                     }
-                    public void onComplete() {}
-                });
+                    public void onComplete() {
 
-                Intent intent = new Intent(this, GaodeActivity.class);
-                intent.putExtra("id", id);
-                startActivity(intent);
+                    }
+                });
         }
     }
 
