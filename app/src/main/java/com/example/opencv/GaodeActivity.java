@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.os.Bundle;
+import android.os.Debug;
 import android.provider.ContactsContract;
 import android.util.Log;
 import android.widget.Toast;
@@ -26,7 +27,9 @@ import com.amap.api.maps2d.model.MyLocationStyle;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
+import cn.leancloud.LCException;
 import cn.leancloud.LCObject;
 import cn.leancloud.LCQuery;
 import cn.leancloud.LeanCloud;
@@ -53,7 +56,6 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         setContentView(R.layout.activity_gaode);
 
         getDatabase();
-        id = (String) getIntent().getExtras().get("id");
 
         try {
             initMap(savedInstanceState);
@@ -68,23 +70,15 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        aMap.setOnMarkerClickListener(marker -> {
+            return true;
+        });
     }
 
     protected void getDatabase(){
         LeanCloud.initialize(this, "nMKlsJWMeXPRTzUXRAtfRA24-gzGzoHsz", "jHVnjnAuhQ52D1BD6QLbKmaH", "https://nmklsjwm.lc-cn-n1-shared.com");
-        LCQuery<LCObject> query = new LCQuery<>("Markers");
-        query.getInBackground("65f02a5b9bbdb31949a9c7b5").subscribe(new Observer<LCObject>() {
-            public void onSubscribe(Disposable disposable) {}
-            public void onNext(LCObject marker) {
-                // todo 就是 objectId 为 582570f38ac247004f39c24b 的 Todo 实例
-                String comment    = marker.getString("comment");
-            }
-            public void onError(Throwable throwable) {
-
-            }
-            public void onComplete(){;
-            }
-        });
+        this.id = getIntent().getStringExtra("id");
     }
 
     private void initMap(Bundle savedInstanceState){
@@ -144,25 +138,6 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
 
         if (amapLocation != null) {
             if (amapLocation.getErrorCode() == 0) {
-//                //定位成功回调信息，设置相关消息
-//                amapLocation.getLocationType();//获取当前定位结果来源，如网络定位结果，详见官方定位类型表
-//                amapLocation.getLatitude();//获取纬度
-//                amapLocation.getLongitude();//获取经度
-//                amapLocation.getAccuracy();//获取精度信息
-//                SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-//                Date date = new Date(amapLocation.getTime());
-//                df.format(date);//定位时间
-//                amapLocation.getAddress();//地址，如果option中设置isNeedAddress为false，则没有此结果，网络定位结果中会有地址信息，GPS定位不返回地址信息。
-//                amapLocation.getCountry();//国家信息
-//                amapLocation.getProvince();//省信息
-//                amapLocation.getCity();//城市信息
-//                amapLocation.getDistrict();//城区信息
-//                amapLocation.getStreet();//街道信息
-//                amapLocation.getStreetNum();//街道门牌号信息
-//                amapLocation.getCityCode();//城市编码
-//                amapLocation.getAdCode();//地区编码
-
-                // 如果不设置标志位，此时再拖动地图时，它会不断将地图移动到当前的位置
                 if (isFirstLoc) {
                     //设置缩放级别
                     aMap.moveCamera(CameraUpdateFactory.zoomTo(17));
@@ -171,40 +146,64 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
                     //点击定位按钮 能够将地图的中心移动到定位点
                     mListener.onLocationChanged(amapLocation);
                     //添加图钉
-                    aMap.addMarker(getMarkerOptions(amapLocation));
+                    aMap.addMarker(getMarkerOptions(amapLocation.getLatitude(), amapLocation.getLongitude()));
                     //获取定位信息
                     StringBuffer buffer = new StringBuffer();
                     buffer.append(amapLocation.getCountry() + "" + amapLocation.getProvince() + "" + amapLocation.getCity() + "" + amapLocation.getProvince() + "" + amapLocation.getDistrict() + "" + amapLocation.getStreet() + "" + amapLocation.getStreetNum());
                     Toast.makeText(getApplicationContext(), buffer.toString(), Toast.LENGTH_LONG).show();
                     isFirstLoc = false;
+
+                    LCObject marker = LCObject.createWithoutData("Markers", id);
+                    Log.d("-------------", id);
+                    marker.put("latitude", amapLocation.getLatitude());
+                    marker.put("longitude", amapLocation.getLongitude());
+                    marker.saveInBackground().subscribe(new Observer<LCObject>() {
+                        public void onSubscribe(Disposable disposable) {}
+                        public void onNext(LCObject savedTodo) {
+                            getMarkers();
+                        }
+                        public void onError(Throwable throwable) {
+                        }
+                        public void onComplete() {}
+                    });
                 }
             } else {
-                //显示错误信息ErrCode是错误码，errInfo是错误信息，详见错误码表。
-                Log.e("AmapError", "location Error, ErrCode:"
-                        + amapLocation.getErrorCode() + ", errInfo:"
-                        + amapLocation.getErrorInfo());
-
                 Toast.makeText(getApplicationContext(), "定位失败", Toast.LENGTH_LONG).show();
             }
         }
     }
 
+    private void getMarkers(){
+        LCQuery<LCObject> query = new LCQuery<>("Markers");
+        query.findInBackground().subscribe(new Observer<List<LCObject>>() {
+            public void onSubscribe(Disposable disposable) {}
+            public void onNext(List<LCObject> markerDataList) {
+                for (LCObject markerData : markerDataList) {
+                    MarkerOptions options = new MarkerOptions();
+                    options.position(new LatLng(markerData.getNumber("latitude").doubleValue(), markerData.getNumber("longitude").doubleValue()));
+                    options.title(markerData.getString("comment"));
+                    options.period(60);
+                    aMap.addMarker(options);
+                }
+            }
+            public void onError(Throwable throwable) {}
+            public void onComplete() {}
+        });
+    }
+
     //自定义一个图钉，并且设置图标，当我们点击图钉时，显示设置的信息
-    private MarkerOptions getMarkerOptions(AMapLocation amapLocation) {
+    private MarkerOptions getMarkerOptions(double lat, double lon) {
         //设置图钉选项
         MarkerOptions options = new MarkerOptions();
         //图标
-        if(bitmap != null){
-            options.icon(BitmapDescriptorFactory.fromBitmap(scaleBitmap(bitmap, 0.2f)));
-        }
+//        if(bitmap != null){
+//            options.icon(BitmapDescriptorFactory.fromBitmap(scaleBitmap(bitmap, 0.2f)));
+//        }
         //位置
-        options.position(new LatLng(amapLocation.getLatitude(), amapLocation.getLongitude()));
+        options.position(new LatLng(lat, lon));
         StringBuffer buffer = new StringBuffer();
-        buffer.append(amapLocation.getCountry() + "" + amapLocation.getProvince() + "" + amapLocation.getCity() +  "" + amapLocation.getDistrict() + "" + amapLocation.getStreet() + "" + amapLocation.getStreetNum());
         //标题
         options.title(buffer.toString());
-        //子标题
-        options.snippet("这里好火");
         //设置多少帧刷新一次图片资源
         options.period(60);
 
@@ -239,6 +238,7 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
     @Override
     protected void onPause() {
         super.onPause();
+        this.isFirstLoc = true;
         mapView.onPause();
     }
 
