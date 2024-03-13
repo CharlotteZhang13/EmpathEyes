@@ -27,7 +27,9 @@ import com.amap.api.maps2d.model.MyLocationStyle;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
+import cn.leancloud.LCException;
 import cn.leancloud.LCObject;
 import cn.leancloud.LCQuery;
 import cn.leancloud.LeanCloud;
@@ -68,6 +70,10 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        aMap.setOnMarkerClickListener(marker -> {
+            return true;
+        });
     }
 
     protected void getDatabase(){
@@ -140,7 +146,7 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
                     //点击定位按钮 能够将地图的中心移动到定位点
                     mListener.onLocationChanged(amapLocation);
                     //添加图钉
-                    aMap.addMarker(getMarkerOptions(amapLocation));
+                    aMap.addMarker(getMarkerOptions(amapLocation.getLatitude(), amapLocation.getLongitude()));
                     //获取定位信息
                     StringBuffer buffer = new StringBuffer();
                     buffer.append(amapLocation.getCountry() + "" + amapLocation.getProvince() + "" + amapLocation.getCity() + "" + amapLocation.getProvince() + "" + amapLocation.getDistrict() + "" + amapLocation.getStreet() + "" + amapLocation.getStreetNum());
@@ -154,11 +160,12 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
                     marker.saveInBackground().subscribe(new Observer<LCObject>() {
                         public void onSubscribe(Disposable disposable) {}
                         public void onNext(LCObject savedTodo) {
+                            getMarkers();
                         }
                         public void onError(Throwable throwable) {
                         }
                         public void onComplete() {}
-                    });;
+                    });
                 }
             } else {
                 Toast.makeText(getApplicationContext(), "定位失败", Toast.LENGTH_LONG).show();
@@ -166,18 +173,35 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         }
     }
 
+    private void getMarkers(){
+        LCQuery<LCObject> query = new LCQuery<>("Markers");
+        query.findInBackground().subscribe(new Observer<List<LCObject>>() {
+            public void onSubscribe(Disposable disposable) {}
+            public void onNext(List<LCObject> markerDataList) {
+                for (LCObject markerData : markerDataList) {
+                    MarkerOptions options = new MarkerOptions();
+                    options.position(new LatLng(markerData.getNumber("latitude").doubleValue(), markerData.getNumber("longitude").doubleValue()));
+                    options.title(markerData.getString("comment"));
+                    options.period(60);
+                    aMap.addMarker(options);
+                }
+            }
+            public void onError(Throwable throwable) {}
+            public void onComplete() {}
+        });
+    }
+
     //自定义一个图钉，并且设置图标，当我们点击图钉时，显示设置的信息
-    private MarkerOptions getMarkerOptions(AMapLocation amapLocation) {
+    private MarkerOptions getMarkerOptions(double lat, double lon) {
         //设置图钉选项
         MarkerOptions options = new MarkerOptions();
         //图标
-        if(bitmap != null){
-            options.icon(BitmapDescriptorFactory.fromBitmap(scaleBitmap(bitmap, 0.2f)));
-        }
+//        if(bitmap != null){
+//            options.icon(BitmapDescriptorFactory.fromBitmap(scaleBitmap(bitmap, 0.2f)));
+//        }
         //位置
-        options.position(new LatLng(amapLocation.getLatitude(), amapLocation.getLongitude()));
+        options.position(new LatLng(lat, lon));
         StringBuffer buffer = new StringBuffer();
-        buffer.append(amapLocation.getCountry() + "" + amapLocation.getProvince() + "" + amapLocation.getCity() +  "" + amapLocation.getDistrict() + "" + amapLocation.getStreet() + "" + amapLocation.getStreetNum());
         //标题
         options.title(buffer.toString());
         //设置多少帧刷新一次图片资源
