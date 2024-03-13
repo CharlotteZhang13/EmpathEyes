@@ -11,6 +11,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -30,9 +31,19 @@ import androidx.core.content.ContextCompat;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import cn.leancloud.LCFile;
+import cn.leancloud.LCObject;
+import cn.leancloud.LCQuery;
+import cn.leancloud.LeanCloud;
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -46,6 +57,26 @@ public class MainActivity extends AppCompatActivity {
     private SeekBar seekBar;
     private static float SEEKBARMAX = 100f;
     private static float SEEKBARPROGRESS = 0.2f;
+    private Bitmap bitmap;
+    private String comments;
+    private String id;
+
+    protected void getDatabase(){
+        LeanCloud.initialize(this, "nMKlsJWMeXPRTzUXRAtfRA24-gzGzoHsz", "jHVnjnAuhQ52D1BD6QLbKmaH", "https://nmklsjwm.lc-cn-n1-shared.com");
+        LCQuery<LCObject> query = new LCQuery<>("Markers");
+        query.getInBackground("65f02a5b9bbdb31949a9c7b5").subscribe(new Observer<LCObject>() {
+            public void onSubscribe(Disposable disposable) {}
+            public void onNext(LCObject marker) {
+                // todo 就是 objectId 为 582570f38ac247004f39c24b 的 Todo 实例
+                String comment    = marker.getString("comment");
+            }
+            public void onError(Throwable throwable) {
+
+            }
+            public void onComplete(){;
+            }
+        });
+    }
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -53,6 +84,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        getDatabase();
 
         filterView = findViewById(R.id.filterView);
         radioGroup = findViewById(R.id.radio_group);
@@ -67,9 +99,10 @@ public class MainActivity extends AppCompatActivity {
             AlertDialog alertDialog1 = new AlertDialog.Builder(this)
                     .setView(dialogView)
                     .setPositiveButton("Share", (dialog, which) -> {
-                        Intent intent = new Intent(this, GaodeActivity.class);
-                        DataClass.getInstance().updateCapturedBitmap(bitmap);
-                        startActivity(intent);
+                        this.bitmap = bitmap;
+                        EditText editText = dialogView.findViewById(R.id.editText);
+                        this.comments = editText.toString();
+                        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, Configuration.REQUEST_WRITE_BITMAP_PERMISSIONS);
                     })
                     .create();
             alertDialog1.show();
@@ -106,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
             //没有权限就重新获取
             // requestPermissions会被外部调用，发送权限并收到回复后会外部调用MainActivity重写了的onRequestPermissionsResult的回调接口（见下面）
             ActivityCompat.requestPermissions(this, Configuration.REQUIRED_PERMISSIONS,
-                    Configuration.REQUEST_CODE_PERMISSIONS);
+                    Configuration.REQUEST_CAMERA_PERMISSIONS);
         }
 
         // 设置照片等保存的位置
@@ -119,13 +152,74 @@ public class MainActivity extends AppCompatActivity {
     //发送权限后调用
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == Configuration.REQUEST_CODE_PERMISSIONS) {
-            if (allPermissionsGranted()) {
-                startCamera();
-            } else {
-                Toast.makeText(this, "用户拒绝授予权限！", Toast.LENGTH_LONG).show();
-                finish();
-            }
+        switch (requestCode){
+            case Configuration.REQUEST_CAMERA_PERMISSIONS:
+                if (allPermissionsGranted()) {
+                    startCamera();
+                } else {
+                    Toast.makeText(this, "用户拒绝授予权限！", Toast.LENGTH_LONG).show();
+                    finish();
+                }
+            case Configuration.REQUEST_WRITE_BITMAP_PERMISSIONS:
+                try {
+                    DataClass.getInstance().updateCapturedBitmap(this.bitmap);
+                    File f = new File(MainActivity.this.getExternalFilesDir(null).getAbsolutePath(), "bitmap.png");
+                    Log.d("-----------", MainActivity.this.getExternalFilesDir(null).getAbsolutePath());
+                    f.createNewFile();
+                    FileOutputStream fOut = null;
+                    try {
+                        fOut = new FileOutputStream(f);
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, fOut);
+                    try {
+                        fOut.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    try {
+                        fOut.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+                LCFile file = new LCFile(MainActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/bitmap.png", "LeanCloud".getBytes());
+                file.saveInBackground().subscribe(new Observer<LCFile>() {
+                    public void onSubscribe(Disposable disposable) {}
+                    public void onNext(LCFile file) {
+                        System.out.println("文件保存完成。URL：" + file.getUrl());
+                    }
+                    public void onError(Throwable throwable) {
+                        // 保存失败，可能是文件无法被读取，或者上传过程中出现问题
+                        Log.d("-----------","error!");
+                    }
+                    public void onComplete() {
+                        Log.d("-----------","successful!");
+                    }
+                });
+
+                LCObject marker = new LCObject("Markers");
+                marker.put("comment", this.comments);
+                marker.put("Image", file);
+                marker.saveInBackground().subscribe(new Observer<LCObject>() {
+                    public void onSubscribe(Disposable disposable) {}
+                    public void onNext(LCObject todo) {
+                        // 成功保存之后，执行其他逻辑
+                        id = todo.getObjectId();
+                    }
+                    public void onError(Throwable throwable) {
+                        // 异常处理
+                    }
+                    public void onComplete() {}
+                });
+
+                Intent intent = new Intent(this, GaodeActivity.class);
+                intent.putExtra("id", id);
+                startActivity(intent);
         }
     }
 
@@ -181,7 +275,8 @@ public class MainActivity extends AppCompatActivity {
     static class Configuration {
         public static final String TAG = "CameraxBasic";
         public static final String FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS";
-        public static final int REQUEST_CODE_PERMISSIONS = 10;
+        public static final int REQUEST_CAMERA_PERMISSIONS = 10;
+        public static final int REQUEST_WRITE_BITMAP_PERMISSIONS = 22;
         public static final String[] REQUIRED_PERMISSIONS = new String[]{Manifest.permission.CAMERA};
     }
 

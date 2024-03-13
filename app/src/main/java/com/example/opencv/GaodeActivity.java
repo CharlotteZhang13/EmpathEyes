@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -22,11 +23,19 @@ import com.amap.api.maps2d.model.LatLng;
 import com.amap.api.maps2d.model.MarkerOptions;
 import com.amap.api.maps2d.model.MyLocationStyle;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import cn.leancloud.LCObject;
+import cn.leancloud.LCQuery;
+import cn.leancloud.LeanCloud;
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
+
 public class GaodeActivity extends AppCompatActivity implements  LocationSource, AMapLocationListener {
 
+    private String id;
     //显示地图需要的变量
     private MapView mapView;//地图控件
     private AMap aMap;//地图对象
@@ -35,7 +44,6 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
     private AMapLocationClientOption mLocationOption = null;//定位参数
     private LocationSource.OnLocationChangedListener mListener = null;//定位监听器
 
-    //标识，用于判断是否只显示一次定位信息和用户重新定位
     private boolean isFirstLoc = true;
     private Bitmap bitmap;
 
@@ -44,15 +52,47 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_gaode);
 
-        bitmap = DataClass.getInstance().getCapturedBitmap();
-        DataClass.getInstance().updateCapturedBitmap(null);
+        getDatabase();
+        id = (String) getIntent().getExtras().get("id");
 
+        try {
+            initMap(savedInstanceState);
+            initLoc();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        bitmap = DataClass.getInstance().getCapturedBitmap();
+        try {
+            DataClass.getInstance().updateCapturedBitmap(null);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    protected void getDatabase(){
+        LeanCloud.initialize(this, "nMKlsJWMeXPRTzUXRAtfRA24-gzGzoHsz", "jHVnjnAuhQ52D1BD6QLbKmaH", "https://nmklsjwm.lc-cn-n1-shared.com");
+        LCQuery<LCObject> query = new LCQuery<>("Markers");
+        query.getInBackground("65f02a5b9bbdb31949a9c7b5").subscribe(new Observer<LCObject>() {
+            public void onSubscribe(Disposable disposable) {}
+            public void onNext(LCObject marker) {
+                // todo 就是 objectId 为 582570f38ac247004f39c24b 的 Todo 实例
+                String comment    = marker.getString("comment");
+            }
+            public void onError(Throwable throwable) {
+
+            }
+            public void onComplete(){;
+            }
+        });
+    }
+
+    private void initMap(Bundle savedInstanceState){
         mapView = (MapView) findViewById(R.id.map);
         //必须要写
         mapView.onCreate(savedInstanceState);
         //获取地图对象
         aMap = mapView.getMap();
-
         //设置显示定位按钮 并且可以点击
         UiSettings settings = aMap.getUiSettings();
         //设置定位监听
@@ -71,20 +111,10 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
 
         AMapLocationClient.updatePrivacyShow(GaodeActivity.this,true,true);
         AMapLocationClient.updatePrivacyAgree(GaodeActivity.this,true);
-        //初始化定位
-        try {
-            mLocationClient = new AMapLocationClient(getApplicationContext());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        //开始定位
-        initLoc();
     }
 
-    private void initLoc() {
-
-
+    private void initLoc() throws Exception {
+        mLocationClient = new AMapLocationClient(getApplicationContext());
         //设置定位回调监听
         mLocationClient.setLocationListener(this);
         //初始化定位参数
@@ -114,23 +144,23 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
 
         if (amapLocation != null) {
             if (amapLocation.getErrorCode() == 0) {
-                //定位成功回调信息，设置相关消息
-                amapLocation.getLocationType();//获取当前定位结果来源，如网络定位结果，详见官方定位类型表
-                amapLocation.getLatitude();//获取纬度
-                amapLocation.getLongitude();//获取经度
-                amapLocation.getAccuracy();//获取精度信息
-                SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                Date date = new Date(amapLocation.getTime());
-                df.format(date);//定位时间
-                amapLocation.getAddress();//地址，如果option中设置isNeedAddress为false，则没有此结果，网络定位结果中会有地址信息，GPS定位不返回地址信息。
-                amapLocation.getCountry();//国家信息
-                amapLocation.getProvince();//省信息
-                amapLocation.getCity();//城市信息
-                amapLocation.getDistrict();//城区信息
-                amapLocation.getStreet();//街道信息
-                amapLocation.getStreetNum();//街道门牌号信息
-                amapLocation.getCityCode();//城市编码
-                amapLocation.getAdCode();//地区编码
+//                //定位成功回调信息，设置相关消息
+//                amapLocation.getLocationType();//获取当前定位结果来源，如网络定位结果，详见官方定位类型表
+//                amapLocation.getLatitude();//获取纬度
+//                amapLocation.getLongitude();//获取经度
+//                amapLocation.getAccuracy();//获取精度信息
+//                SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+//                Date date = new Date(amapLocation.getTime());
+//                df.format(date);//定位时间
+//                amapLocation.getAddress();//地址，如果option中设置isNeedAddress为false，则没有此结果，网络定位结果中会有地址信息，GPS定位不返回地址信息。
+//                amapLocation.getCountry();//国家信息
+//                amapLocation.getProvince();//省信息
+//                amapLocation.getCity();//城市信息
+//                amapLocation.getDistrict();//城区信息
+//                amapLocation.getStreet();//街道信息
+//                amapLocation.getStreetNum();//街道门牌号信息
+//                amapLocation.getCityCode();//城市编码
+//                amapLocation.getAdCode();//地区编码
 
                 // 如果不设置标志位，此时再拖动地图时，它会不断将地图移动到当前的位置
                 if (isFirstLoc) {
@@ -148,8 +178,6 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
                     Toast.makeText(getApplicationContext(), buffer.toString(), Toast.LENGTH_LONG).show();
                     isFirstLoc = false;
                 }
-
-
             } else {
                 //显示错误信息ErrCode是错误码，errInfo是错误信息，详见错误码表。
                 Log.e("AmapError", "location Error, ErrCode:"
@@ -191,50 +219,35 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         return newBitmap;
     }
 
-    //激活定位
     @Override
     public void activate(LocationSource.OnLocationChangedListener listener) {
         mListener = listener;
 
     }
 
-    //停止定位
     @Override
     public void deactivate() {
         mListener = null;
     }
 
-
-    /**
-     * 方法必须重写
-     */
     @Override
     protected void onResume() {
         super.onResume();
         mapView.onResume();
     }
 
-    /**
-     * 方法必须重写
-     */
     @Override
     protected void onPause() {
         super.onPause();
         mapView.onPause();
     }
 
-    /**
-     * 方法必须重写
-     */
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         mapView.onSaveInstanceState(outState);
     }
 
-    /**
-     * 方法必须重写
-     */
     @Override
     protected void onDestroy() {
         super.onDestroy();
