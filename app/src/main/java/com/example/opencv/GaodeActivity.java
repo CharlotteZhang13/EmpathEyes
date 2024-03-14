@@ -3,11 +3,15 @@ package com.example.opencv;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.os.Bundle;
 import android.os.Debug;
 import android.provider.ContactsContract;
 import android.util.Log;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.amap.api.location.AMapLocation;
@@ -21,15 +25,20 @@ import com.amap.api.maps2d.MapView;
 import com.amap.api.maps2d.UiSettings;
 import com.amap.api.maps2d.model.BitmapDescriptorFactory;
 import com.amap.api.maps2d.model.LatLng;
+import com.amap.api.maps2d.model.Marker;
 import com.amap.api.maps2d.model.MarkerOptions;
 import com.amap.api.maps2d.model.MyLocationStyle;
+import com.amap.api.maps2d.model.Text;
+import com.bumptech.glide.Glide;
 
 import java.io.IOException;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
 import cn.leancloud.LCException;
+import cn.leancloud.LCFile;
 import cn.leancloud.LCObject;
 import cn.leancloud.LCQuery;
 import cn.leancloud.LeanCloud;
@@ -71,7 +80,58 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
             throw new RuntimeException(e);
         }
 
+        AMap.InfoWindowAdapter mAMapSpotAdapter = new AMap.InfoWindowAdapter() {
+            @Override
+            public View getInfoWindow(Marker marker) {
+                if ("".equals(marker.getTitle()) || marker.getTitle() == null) {
+                    return null;
+                }
+                View infoContent = getLayoutInflater().inflate(R.layout.marker_layout, null);
+                render(marker, infoContent);
+                return infoContent;
+            }
+
+            @Override
+            public View getInfoContents(Marker marker) {
+                if ("".equals(marker.getTitle()) || marker.getTitle() == null) {
+                    return null;
+                }
+                View infoContent = getLayoutInflater().inflate(R.layout.marker_layout, null);
+                render(marker, infoContent);
+                return infoContent;
+            }
+
+            private void render(Marker marker, View view){
+                String comment = marker.getSnippet();
+                TextView commentView = view.findViewById(R.id.comment);
+                commentView.setText(comment);
+
+                LCQuery<LCObject> query = new LCQuery<>("Markers");
+                query.getInBackground(marker.getTitle()).subscribe(new Observer<LCObject>() {
+                    public void onSubscribe(Disposable disposable) {}
+                    public void onNext(LCObject todo) {
+                        LCFile file = todo.getLCFile("Image");
+                        ImageView imageView = view.findViewById(R.id.img);
+                        String url = file.getThumbnailUrl(true, 90, 90);
+                        Log.d("----------", url);
+                        Glide.with(view)
+                                .load(url)
+                                .placeholder(R.drawable.eye_icon) // Optional placeholder image while loading
+                                .error(R.drawable.ic_launcher_background) // Optional error image if loading fails
+                                .into(imageView);
+                    }
+                    public void onError(Throwable throwable) {}
+                    public void onComplete() {}
+                });
+            }
+        };
+        aMap.setInfoWindowAdapter(mAMapSpotAdapter);
         aMap.setOnMarkerClickListener(marker -> {
+            if (marker.isInfoWindowShown()) {
+                marker.hideInfoWindow();
+            } else {
+                marker.showInfoWindow();
+            }
             return true;
         });
     }
@@ -178,11 +238,13 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         query.findInBackground().subscribe(new Observer<List<LCObject>>() {
             public void onSubscribe(Disposable disposable) {}
             public void onNext(List<LCObject> markerDataList) {
-                for (LCObject markerData : markerDataList) {
-                    MarkerOptions options = new MarkerOptions();
-                    options.position(new LatLng(markerData.getNumber("latitude").doubleValue(), markerData.getNumber("longitude").doubleValue()));
-                    options.title(markerData.getString("comment"));
-                    options.period(60);
+                for (int i = 0; i < markerDataList.size(); i++){
+                    LCObject markerData = markerDataList.get(i);
+                    MarkerOptions options = new MarkerOptions()
+                            .position(new LatLng(markerData.getNumber("latitude").doubleValue(), markerData.getNumber("longitude").doubleValue()))
+                            .title(markerData.getObjectId())
+                            .snippet(markerData.getString("comment"))
+                            .period(60);
                     aMap.addMarker(options);
                 }
             }
