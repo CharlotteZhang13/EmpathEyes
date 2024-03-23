@@ -168,12 +168,21 @@ public class MainActivity extends AppCompatActivity {
                     throw new RuntimeException(e);
                 }
 
-                LCFile file = new LCFile(MainActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/bitmap.png", "LeanCloud".getBytes());
+//                LCFile file = new LCFile(MainActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/bitmap.png", "LeanCloud".getBytes());
+                LCFile file = null;
+                try {
+                    file = LCFile.withAbsoluteLocalPath("img.jpg", MainActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/bitmap.png");
+                } catch (FileNotFoundException e) {
+                    Log.d("____________", "FileNotFound error");
+                    Log.d("____________", e.toString());
+                }
                 file.saveInBackground().subscribe(new Observer<LCFile>() {
                     public void onSubscribe(Disposable disposable) {}
                     public void onNext(LCFile file) {
                     }
                     public void onError(Throwable throwable) {
+                        Log.d("____________", "saveinBackgrounderror");
+                        Log.d("____________", throwable.toString());
                     }
                     public void onComplete() {
                     }
@@ -188,7 +197,6 @@ public class MainActivity extends AppCompatActivity {
                         id = todo.getObjectId();
                         Intent intent = new Intent(MainActivity.this, GaodeActivity.class);
                         intent.putExtra("id", id);
-                        Log.d("------------", id);
                         startActivity(intent);
                     }
                     public void onError(Throwable throwable) {

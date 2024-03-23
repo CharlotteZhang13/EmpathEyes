@@ -1,7 +1,9 @@
 package com.example.opencv;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -29,7 +31,6 @@ import com.amap.api.maps2d.model.Marker;
 import com.amap.api.maps2d.model.MarkerOptions;
 import com.amap.api.maps2d.model.MyLocationStyle;
 import com.amap.api.maps2d.model.Text;
-import com.bumptech.glide.Glide;
 
 import java.io.IOException;
 import java.net.URL;
@@ -44,6 +45,8 @@ import cn.leancloud.LCQuery;
 import cn.leancloud.LeanCloud;
 import io.reactivex.Observer;
 import io.reactivex.disposables.Disposable;
+
+import com.squareup.picasso.Picasso;
 
 public class GaodeActivity extends AppCompatActivity implements  LocationSource, AMapLocationListener {
 
@@ -114,11 +117,8 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
                         ImageView imageView = view.findViewById(R.id.img);
                         String url = file.getThumbnailUrl(true, 90, 90);
                         Log.d("----------", url);
-                        Glide.with(view)
-                                .load(url)
-                                .placeholder(R.drawable.eye_icon) // Optional placeholder image while loading
-                                .error(R.drawable.ic_launcher_background) // Optional error image if loading fails
-                                .into(imageView);
+
+                        Picasso.get().load(url).into(imageView);
                     }
                     public void onError(Throwable throwable) {}
                     public void onComplete() {}
@@ -191,7 +191,15 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         mLocationClient.startLocation();
     }
 
-
+    private boolean allPermissionsGranted() {
+        for (String permission : ) {
+            if (ContextCompat.checkSelfPermission(this, permission)
+                    != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
     //定位回调函数
     @Override
     public void onLocationChanged(AMapLocation amapLocation) {
@@ -214,7 +222,6 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
                     isFirstLoc = false;
 
                     LCObject marker = LCObject.createWithoutData("Markers", id);
-                    Log.d("-------------", id);
                     marker.put("latitude", amapLocation.getLatitude());
                     marker.put("longitude", amapLocation.getLongitude());
                     marker.saveInBackground().subscribe(new Observer<LCObject>() {
@@ -273,17 +280,9 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
 
     }
 
-    private Bitmap scaleBitmap(Bitmap bitmap, float scale){
-        Matrix matrix = new Matrix();
-        matrix.setScale(scale, scale);
-        Bitmap newBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, false);
-        return newBitmap;
-    }
-
     @Override
     public void activate(LocationSource.OnLocationChangedListener listener) {
         mListener = listener;
-
     }
 
     @Override
