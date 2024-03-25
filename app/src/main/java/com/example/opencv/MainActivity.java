@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.os.Bundle;
+import android.os.Debug;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -29,6 +30,7 @@ import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.xiasuhuei321.loadingdialog.view.LoadingDialog;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -60,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
     private Bitmap bitmap;
     private String comments;
     private String id;
+    private LoadingDialog ld;
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -81,15 +84,18 @@ public class MainActivity extends AppCompatActivity {
             AlertDialog alertDialog1 = new AlertDialog.Builder(this)
                     .setView(dialogView)
                     .setPositiveButton("Share", (dialog, which) -> {
+                        ld = new LoadingDialog(this);
+                        ld.setLoadingText("Uploading to database")
+                                .setSuccessText("Successful upload")//显示加载成功时的文字
+                                .setFailedText("Failed to upload");
                         this.bitmap = bitmap;
                         EditText editText = dialogView.findViewById(R.id.editText);
                         this.comments = editText.getText().toString();
-                        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, Configuration.REQUEST_WRITE_BITMAP_PERMISSIONS);
+                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, Configuration.REQUEST_WRITE_BITMAP_PERMISSIONS);
                     })
                     .create();
             alertDialog1.show();
         });
-
 
         radioGroup.setOnCheckedChangeListener((group, checkedId) -> {
             RadioButton selectedRadioButton = findViewById(checkedId);
@@ -126,9 +132,75 @@ public class MainActivity extends AppCompatActivity {
 
         // 设置照片等保存的位置
         outputDirectory = getOutputDirectory();
-
         cameraExecutor = Executors.newSingleThreadExecutor();
+    }
 
+    public void saveImageLocally(){
+        try {
+            DataClass.getInstance().updateCapturedBitmap(this.bitmap);
+            File f = new File(MainActivity.this.getExternalFilesDir(null).getAbsolutePath(), "bitmap.png");
+            f.createNewFile();
+            FileOutputStream fOut = null;
+            try {
+                fOut = new FileOutputStream(f);
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fOut);
+            try {
+                fOut.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                fOut.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void saveImageToCloud(){
+        ld.show();
+        LCFile file = null;
+        try {
+            file = LCFile.withAbsoluteLocalPath("img.jpg", MainActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/bitmap.png");
+        } catch (FileNotFoundException e) {
+
+        }
+        file.saveInBackground().subscribe(new Observer<LCFile>() {
+            public void onSubscribe(Disposable disposable) {}
+            public void onNext(LCFile file) {
+            }
+            public void onError(Throwable throwable){
+                ld.loadFailed();
+            }
+            public void onComplete() {
+            }
+        });
+
+        LCObject marker = new LCObject("Markers");
+        marker.put("comment", this.comments);
+        marker.put("Image", file);
+        marker.saveInBackground().subscribe(new Observer<LCObject>() {
+            public void onSubscribe(Disposable disposable) {
+
+            }
+            public void onNext(LCObject todo) {
+                id = todo.getObjectId();
+                Intent intent = new Intent(MainActivity.this, GaodeActivity.class);
+                intent.putExtra("id", id);
+                startActivity(intent);
+            }
+            public void onError(Throwable throwable) {
+                ld.loadFailed();
+            }
+            public void onComplete() {
+                ld.close();
+            }
+        });
     }
 
     //发送权限后调用
@@ -139,73 +211,20 @@ public class MainActivity extends AppCompatActivity {
                 if (allPermissionsGranted()) {
                     startCamera();
                 } else {
-                    Toast.makeText(this, "用户拒绝授予权限！", Toast.LENGTH_LONG).show();
-                    finish();
+                    Toast.makeText(getApplicationContext(), "Please enable camera permissions", Toast.LENGTH_SHORT).show();
                 }
+                break;
             case Configuration.REQUEST_WRITE_BITMAP_PERMISSIONS:
-                try {
-                    DataClass.getInstance().updateCapturedBitmap(this.bitmap);
-                    File f = new File(MainActivity.this.getExternalFilesDir(null).getAbsolutePath(), "bitmap.png");
-                    f.createNewFile();
-                    FileOutputStream fOut = null;
-                    try {
-                        fOut = new FileOutputStream(f);
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    }
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, fOut);
-                    try {
-                        fOut.flush();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    try {
-                        fOut.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+                Log.d("-------------", String.valueOf(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE)));
+                if(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
+                    saveImageLocally();
+                    saveImageToCloud();
+                } else {
+//                    Toast.makeText(getApplicationContext(), "Please enable storage permissions", Toast.LENGTH_SHORT).show();
+                    saveImageLocally();
+                    saveImageToCloud();
                 }
-
-//                LCFile file = new LCFile(MainActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/bitmap.png", "LeanCloud".getBytes());
-                LCFile file = null;
-                try {
-                    file = LCFile.withAbsoluteLocalPath("img.jpg", MainActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/bitmap.png");
-                } catch (FileNotFoundException e) {
-                    Log.d("____________", "FileNotFound error");
-                    Log.d("____________", e.toString());
-                }
-                file.saveInBackground().subscribe(new Observer<LCFile>() {
-                    public void onSubscribe(Disposable disposable) {}
-                    public void onNext(LCFile file) {
-                    }
-                    public void onError(Throwable throwable) {
-                        Log.d("____________", "saveinBackgrounderror");
-                        Log.d("____________", throwable.toString());
-                    }
-                    public void onComplete() {
-                    }
-                });
-
-                LCObject marker = new LCObject("Markers");
-                marker.put("comment", this.comments);
-                marker.put("Image", file);
-                marker.saveInBackground().subscribe(new Observer<LCObject>() {
-                    public void onSubscribe(Disposable disposable) {}
-                    public void onNext(LCObject todo) {
-                        id = todo.getObjectId();
-                        Intent intent = new Intent(MainActivity.this, GaodeActivity.class);
-                        intent.putExtra("id", id);
-                        startActivity(intent);
-                    }
-                    public void onError(Throwable throwable) {
-                        // 异常处理
-                    }
-                    public void onComplete() {
-
-                    }
-                });
+                break;
         }
     }
 

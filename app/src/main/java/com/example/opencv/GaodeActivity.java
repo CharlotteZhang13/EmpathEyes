@@ -1,12 +1,18 @@
 package com.example.opencv;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Debug;
 import android.provider.ContactsContract;
@@ -58,82 +64,32 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
     private AMapLocationClient mLocationClient = null;//定位发起端
     private AMapLocationClientOption mLocationOption = null;//定位参数
     private LocationSource.OnLocationChangedListener mListener = null;//定位监听器
-
+    private Bundle savedInstanceState;
+    private AMap.InfoWindowAdapter mAMapSpotAdapter;
     private boolean isFirstLoc = true;
-    private Bitmap bitmap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_gaode);
+        this.savedInstanceState = savedInstanceState;
 
         getDatabase();
-
         try {
             initMap(savedInstanceState);
             initLoc();
+            initAdapter();
+            setMap();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
-        bitmap = DataClass.getInstance().getCapturedBitmap();
-        try {
-            DataClass.getInstance().updateCapturedBitmap(null);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
+
+        } else {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, Configuration.REQUEST_COARSE_LOCATION);
         }
-
-        AMap.InfoWindowAdapter mAMapSpotAdapter = new AMap.InfoWindowAdapter() {
-            @Override
-            public View getInfoWindow(Marker marker) {
-                if ("".equals(marker.getTitle()) || marker.getTitle() == null) {
-                    return null;
-                }
-                View infoContent = getLayoutInflater().inflate(R.layout.marker_layout, null);
-                render(marker, infoContent);
-                return infoContent;
-            }
-
-            @Override
-            public View getInfoContents(Marker marker) {
-                if ("".equals(marker.getTitle()) || marker.getTitle() == null) {
-                    return null;
-                }
-                View infoContent = getLayoutInflater().inflate(R.layout.marker_layout, null);
-                render(marker, infoContent);
-                return infoContent;
-            }
-
-            private void render(Marker marker, View view){
-                String comment = marker.getSnippet();
-                TextView commentView = view.findViewById(R.id.comment);
-                commentView.setText(comment);
-
-                LCQuery<LCObject> query = new LCQuery<>("Markers");
-                query.getInBackground(marker.getTitle()).subscribe(new Observer<LCObject>() {
-                    public void onSubscribe(Disposable disposable) {}
-                    public void onNext(LCObject todo) {
-                        LCFile file = todo.getLCFile("Image");
-                        ImageView imageView = view.findViewById(R.id.img);
-                        String url = file.getThumbnailUrl(true, 90, 90);
-                        Log.d("----------", url);
-
-                        Picasso.get().load(url).into(imageView);
-                    }
-                    public void onError(Throwable throwable) {}
-                    public void onComplete() {}
-                });
-            }
-        };
-        aMap.setInfoWindowAdapter(mAMapSpotAdapter);
-        aMap.setOnMarkerClickListener(marker -> {
-            if (marker.isInfoWindowShown()) {
-                marker.hideInfoWindow();
-            } else {
-                marker.showInfoWindow();
-            }
-            return true;
-        });
     }
 
     protected void getDatabase(){
@@ -167,6 +123,56 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         AMapLocationClient.updatePrivacyAgree(GaodeActivity.this,true);
     }
 
+    private void initAdapter(){
+        mAMapSpotAdapter = new AMap.InfoWindowAdapter() {
+            @Override
+            public View getInfoWindow(Marker marker) {
+                if ("".equals(marker.getTitle()) || marker.getTitle() == null) {
+                    return null;
+                }
+                View infoContent = getLayoutInflater().inflate(R.layout.marker_layout, null);
+                render(marker, infoContent);
+                return infoContent;
+            }
+
+            @Override
+            public View getInfoContents(Marker marker) {
+                if ("".equals(marker.getTitle()) || marker.getTitle() == null) {
+                    return null;
+                }
+                View infoContent = getLayoutInflater().inflate(R.layout.marker_layout, null);
+                render(marker, infoContent);
+                return infoContent;
+            }
+
+            private void render(Marker marker, View view){
+                String comment = marker.getSnippet();
+                TextView commentView = view.findViewById(R.id.comment);
+                commentView.setText(comment);
+
+                LCQuery<LCObject> query = new LCQuery<>("Markers");
+                query.getInBackground(marker.getTitle()).subscribe(new Observer<LCObject>() {
+                    public void onSubscribe(Disposable disposable) {}
+                    @SuppressLint("UseCompatLoadingForDrawables")
+                    public void onNext(LCObject todo) {
+                        LCFile file = todo.getLCFile("Image");
+                        ImageView imageView = view.findViewById(R.id.img);
+                        String url = file.getThumbnailUrl(true, 90, 90);
+                        Log.d("----------", url);
+
+                        Picasso.get()
+                                .load(url)
+                                .placeholder(getResources().getDrawable(R.drawable.loading))
+                                .error(getResources().getDrawable(R.drawable.baseline_error_24))
+                                .into(imageView);
+                    }
+                    public void onError(Throwable throwable) {}
+                    public void onComplete() {}
+                });
+            }
+        };
+    }
+
     private void initLoc() throws Exception {
         mLocationClient = new AMapLocationClient(getApplicationContext());
         //设置定位回调监听
@@ -191,20 +197,44 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         mLocationClient.startLocation();
     }
 
-    private boolean allPermissionsGranted() {
-        for (String permission : ) {
-            if (ContextCompat.checkSelfPermission(this, permission)
-                    != PackageManager.PERMISSION_GRANTED) {
-                return false;
+    private void setMap(){
+        aMap.setInfoWindowAdapter(mAMapSpotAdapter);
+        aMap.setOnMarkerClickListener(marker -> {
+            if (marker.isInfoWindowShown()) {
+                marker.hideInfoWindow();
+            } else {
+                marker.showInfoWindow();
             }
-        }
-        return true;
+            return true;
+        });
     }
+
+    static class Configuration {
+        public static final int REQUEST_COARSE_LOCATION = 15;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode){
+            case Configuration.REQUEST_COARSE_LOCATION:
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)== PackageManager.PERMISSION_GRANTED) {
+                    try {
+                        initLoc();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                } else {
+                    Toast.makeText(this, "Please enable location permissions", Toast.LENGTH_SHORT).show();
+                }
+                break;
+        }
+    }
+
     //定位回调函数
     @Override
     public void onLocationChanged(AMapLocation amapLocation) {
-
-        if (amapLocation != null) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED && amapLocation != null) {
             if (amapLocation.getErrorCode() == 0) {
                 if (isFirstLoc) {
                     //设置缩放级别
@@ -221,18 +251,20 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
                     Toast.makeText(getApplicationContext(), buffer.toString(), Toast.LENGTH_LONG).show();
                     isFirstLoc = false;
 
-                    LCObject marker = LCObject.createWithoutData("Markers", id);
-                    marker.put("latitude", amapLocation.getLatitude());
-                    marker.put("longitude", amapLocation.getLongitude());
-                    marker.saveInBackground().subscribe(new Observer<LCObject>() {
-                        public void onSubscribe(Disposable disposable) {}
-                        public void onNext(LCObject savedTodo) {
-                            getMarkers();
-                        }
-                        public void onError(Throwable throwable) {
-                        }
-                        public void onComplete() {}
-                    });
+                    if(id != null){
+                        LCObject marker = LCObject.createWithoutData("Markers", id);
+                        marker.put("latitude", amapLocation.getLatitude());
+                        marker.put("longitude", amapLocation.getLongitude());
+                        marker.saveInBackground().subscribe(new Observer<LCObject>() {
+                            public void onSubscribe(Disposable disposable) {}
+                            public void onNext(LCObject savedTodo) {
+                                getMarkers();
+                            }
+                            public void onError(Throwable throwable) {
+                            }
+                            public void onComplete() {}
+                        });
+                    }
                 }
             } else {
                 Toast.makeText(getApplicationContext(), "定位失败", Toast.LENGTH_LONG).show();
@@ -247,6 +279,9 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
             public void onNext(List<LCObject> markerDataList) {
                 for (int i = 0; i < markerDataList.size(); i++){
                     LCObject markerData = markerDataList.get(i);
+                    if(markerData.getNumber("latitude") == null || markerData.getNumber("longitude") == null){
+                        continue;
+                    }
                     MarkerOptions options = new MarkerOptions()
                             .position(new LatLng(markerData.getNumber("latitude").doubleValue(), markerData.getNumber("longitude").doubleValue()))
                             .title(markerData.getObjectId())
@@ -264,10 +299,6 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
     private MarkerOptions getMarkerOptions(double lat, double lon) {
         //设置图钉选项
         MarkerOptions options = new MarkerOptions();
-        //图标
-//        if(bitmap != null){
-//            options.icon(BitmapDescriptorFactory.fromBitmap(scaleBitmap(bitmap, 0.2f)));
-//        }
         //位置
         options.position(new LatLng(lat, lon));
         StringBuffer buffer = new StringBuffer();
@@ -283,11 +314,13 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
     @Override
     public void activate(LocationSource.OnLocationChangedListener listener) {
         mListener = listener;
+        mLocationClient.startLocation();
     }
 
     @Override
     public void deactivate() {
         mListener = null;
+        mLocationClient.stopLocation();
     }
 
     @Override
@@ -299,7 +332,7 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
     @Override
     protected void onPause() {
         super.onPause();
-        this.isFirstLoc = true;
+
         mapView.onPause();
     }
 
