@@ -19,6 +19,7 @@ import android.provider.ContactsContract;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -67,6 +68,9 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
     private Bundle savedInstanceState;
     private AMap.InfoWindowAdapter mAMapSpotAdapter;
     private boolean isFirstLoc = true;
+    private Spinner mSpinner;
+    private List<LCObject> mMarkerDataList = null;
+    private SpinnerAdapter.OnSpinnerListener mOnspinnerListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,6 +94,16 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, Configuration.REQUEST_COARSE_LOCATION);
         }
+
+        mSpinner = findViewById(R.id.spinner);
+        mOnspinnerListener = new SpinnerAdapter.OnSpinnerListener() {
+            @Override
+            public void onSpinnerClick(double lat, double lon) {
+                aMap.moveCamera(CameraUpdateFactory.zoomTo(17));
+                //将地图移动到定位点
+                aMap.moveCamera(CameraUpdateFactory.changeLatLng(new LatLng(lat, lon)));
+            }
+        };
     }
 
     protected void getDatabase(){
@@ -158,7 +172,6 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
                         LCFile file = todo.getLCFile("Image");
                         ImageView imageView = view.findViewById(R.id.img);
                         String url = file.getThumbnailUrl(true, 90, 90);
-                        Log.d("----------", url);
 
                         Picasso.get()
                                 .load(url)
@@ -277,6 +290,10 @@ public class GaodeActivity extends AppCompatActivity implements  LocationSource,
         query.findInBackground().subscribe(new Observer<List<LCObject>>() {
             public void onSubscribe(Disposable disposable) {}
             public void onNext(List<LCObject> markerDataList) {
+                mMarkerDataList = markerDataList;
+                SpinnerAdapter spinnerAdapter = new SpinnerAdapter(getApplicationContext(), mMarkerDataList, mOnspinnerListener);
+                mSpinner.setAdapter(spinnerAdapter);
+
                 for (int i = 0; i < markerDataList.size(); i++){
                     LCObject markerData = markerDataList.get(i);
                     if(markerData.getNumber("latitude") == null || markerData.getNumber("longitude") == null){
