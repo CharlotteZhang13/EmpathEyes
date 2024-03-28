@@ -195,7 +195,6 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
             public void onError(Throwable throwable) {
-                ld.loadFailed();
             }
             public void onComplete() {
                 ld.close();
