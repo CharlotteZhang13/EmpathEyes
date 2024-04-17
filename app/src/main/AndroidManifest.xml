@@ -44,7 +44,7 @@
             android:exported="false" />
         <activity
             android:name=".GaodeActivity"
-            android:exported="true"></activity>
+            android:exported="true" />
 
         <meta-data
             android:name="com.amap.api.v2.apikey"
@@ -65,6 +65,12 @@
 
         <activity
             android:name=".MainActivity"
+            android:exported="true">
+
+        </activity>
+
+        <activity
+            android:name=".LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
